@@ -37,6 +37,27 @@ export default function App() {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [onboardingError, setOnboardingError] = useState('');
 
+  const [apiUsers, setApiUsers] = useState([]);
+  const [apiUsersLoading, setApiUsersLoading] = useState(true);
+
+  // Fetch users for onboarding selector
+  useEffect(() => {
+    if (hasEntered) return;
+    fetch('https://jsonplaceholder.typicode.com/users?_limit=3')
+      .then(res => {
+        if (!res.ok) throw new Error('API error');
+        return res.json();
+      })
+      .then(data => {
+        setApiUsers(data);
+        setApiUsersLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching onboarding users:', err);
+        setApiUsersLoading(false);
+      });
+  }, [hasEntered]);
+
   // Fetch initial tasks from public API if first time
   useEffect(() => {
     const initialized = localStorage.getItem('tasksInitialized');
@@ -134,7 +155,16 @@ export default function App() {
       clearTimeout(setupTimer);
       clearTimeout(clearTimer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasEntered]);
+
+  const handleSelectProfile = (user) => {
+    const name = user.name;
+    const registration = `REG-${user.id}042${user.username.toUpperCase()}`;
+    setStudentName(name);
+    setRegNo(registration);
+    setHasEntered(true);
+  };
 
   const handleLaunch = (e) => {
     e.preventDefault();
@@ -183,8 +213,44 @@ export default function App() {
             Organize your daily tasks, filter them, see your progress, and get sample tasks from an online list.
           </p>
 
+          <div className="profile-selector">
+            <h3>Choose an Account to Continue</h3>
+            {apiUsersLoading ? (
+              <div className="loading-state" style={{ padding: '1rem' }}>
+                <div className="spinner"></div>
+                <p style={{ fontSize: '0.85rem' }}>Fetching accounts...</p>
+              </div>
+            ) : apiUsers.length > 0 ? (
+              <div className="profile-cards">
+                {apiUsers.map((user, idx) => {
+                  const avatars = ['🧑‍💻', '👩‍💻', '👨‍💻'];
+                  return (
+                    <button
+                      key={user.id}
+                      className="profile-card btn"
+                      style={{ padding: '0.85rem 1.25rem', width: '100%' }}
+                      onClick={() => handleSelectProfile(user)}
+                    >
+                      <span className="profile-avatar">{avatars[idx % avatars.length]}</span>
+                      <div className="profile-details">
+                        <span className="profile-name">{user.name}</span>
+                        <span className="profile-meta">{user.email} • REG-{user.id}042{user.username.toUpperCase()}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Offline: Setup manual details below.
+              </p>
+            )}
+          </div>
+
+          <div className="onboarding-divider">OR</div>
+
           <form onSubmit={handleLaunch} className="onboarding-form">
-            <h3>Enter Your Info to Start</h3>
+            <h3>Enter Manual Details</h3>
             
             <div className="form-group">
               <label htmlFor="onboardName">Student Name</label>
