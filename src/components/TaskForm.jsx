@@ -99,10 +99,10 @@ export default function TaskForm({ onAddTask }) {
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              <option value="Work">💻 Work</option>
-              <option value="Personal">🏡 Personal</option>
-              <option value="Studies">📚 Studies</option>
-              <option value="Fitness">💪 Fitness</option>
+              <option value="Work">💻Work</option>
+              <option value="Personal">🏡Personal</option>
+              <option value="Studies">📚Studies</option>
+              <option value="Fitness">💪Fitness</option>
             </select>
           </div>
         </div>

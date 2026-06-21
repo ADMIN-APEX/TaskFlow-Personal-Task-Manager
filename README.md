@@ -9,7 +9,7 @@
 - **Onboarding Portal:** Get started by setting up student details (name and registration number), which are saved in local storage.
 - **Dynamic Stats Dashboard:** Live overview of metrics:
   - Total number of tasks
-  - Completed vs. Pending items count
+  - Completed vs Pending items count
   - Visual color-gradient progress bar indicator of task completion percentage
 - **Interactive Task Form:** Add tasks with title validations, optional details, category tags (💻 Work, 🏡 Personal, 📚 Studies, 💪 Fitness), and priority levels (High, Medium, Low) with custom date deadlines.
 - **Power Filters & Search:** Filter tasks dynamically by completion status (All, Active, Completed), search text queries, priority selectors, and category selectors.

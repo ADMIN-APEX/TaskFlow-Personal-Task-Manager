@@ -4,6 +4,7 @@ import TaskForm from './components/TaskForm';
 import TaskList from './components/TaskList';
 import ApiRecords from './components/ApiRecords';
 import Footer from './components/Footer';
+import logoImg from './assets/logo.jpg';
 import './App.css';
 
 export default function App() {
@@ -20,13 +21,12 @@ export default function App() {
   });
 
   const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('tasks');
-    if (saved && (saved.includes('delectus') || saved.includes('autem') || saved.includes('laboriosam') || saved.includes('facilis') || (saved.includes('Organize documents') && saved.includes('Fitness')))) {
-      localStorage.removeItem('tasks');
-      localStorage.removeItem('tasksInitialized');
-      return [];
+    const savedReg = localStorage.getItem('regNo') || '';
+    if (savedReg) {
+      const saved = localStorage.getItem(`tasks_${savedReg}`);
+      return saved ? JSON.parse(saved) : [];
     }
-    return saved ? JSON.parse(saved) : [];
+    return [];
   });
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -58,50 +58,6 @@ export default function App() {
       });
   }, [hasEntered]);
 
-  // Fetch initial tasks from public API if first time
-  useEffect(() => {
-    const initialized = localStorage.getItem('tasksInitialized');
-    const savedTasks = localStorage.getItem('tasks');
-    
-    if (!initialized && (!savedTasks || JSON.parse(savedTasks).length === 0)) {
-      fetch('https://jsonplaceholder.typicode.com/todos?_limit=5')
-        .then(res => {
-          if (!res.ok) throw new Error('API error');
-          return res.json();
-        })
-        .then(data => {
-          const defaultEnglishTasks = [
-            { title: "Complete React coding assignments", category: "Studies", priority: "High" },
-            { title: "Write the weekly work report", category: "Work", priority: "High" },
-            { title: "Read module learning outcomes", category: "Studies", priority: "Medium" },
-            { title: "Organize documents and folders", category: "Personal", priority: "Low" },
-            { title: "Submit final project zip file", category: "Work", priority: "High" }
-          ];
-          const mapped = data.map((todo, idx) => {
-            const taskDetails = defaultEnglishTasks[idx % defaultEnglishTasks.length];
-            return {
-              id: todo.id,
-              title: taskDetails.title,
-              completed: todo.completed,
-              priority: taskDetails.priority,
-              category: taskDetails.category,
-              createdAt: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-            };
-          });
-          setTasks(mapped);
-          localStorage.setItem('tasksInitialized', 'true');
-        })
-        .catch(err => {
-          console.error('Error fetching initial API tasks:', err);
-          // Fallback static tasks if offline
-          setTasks([
-            { id: 1, title: 'Read React components guide', priority: 'High', category: 'Studies', completed: true, createdAt: 'Jun 20' },
-            { id: 2, title: 'Complete task manager website project', priority: 'High', category: 'Work', completed: false, createdAt: 'Jun 20' }
-          ]);
-        });
-    }
-  }, []);
-
   useEffect(() => {
     localStorage.setItem('studentName', studentName);
   }, [studentName]);
@@ -111,8 +67,10 @@ export default function App() {
   }, [regNo]);
 
   useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
+    if (regNo) {
+      localStorage.setItem(`tasks_${regNo}`, JSON.stringify(tasks));
+    }
+  }, [tasks, regNo]);
 
   useEffect(() => {
     localStorage.setItem('hasEnteredWorkspace', JSON.stringify(hasEntered));
@@ -158,11 +116,52 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasEntered]);
 
+  const initializeUserTasks = (userReg) => {
+    const storageKey = `tasks_${userReg}`;
+    const initializedKey = `tasksInitialized_v3_${userReg}`;
+    
+    fetch('https://jsonplaceholder.typicode.com/todos?_limit=5')
+      .then(res => {
+        if (!res.ok) throw new Error('API error');
+        return res.json();
+      })
+      .then(data => {
+        const priorities = ['High', 'Medium', 'Low'];
+        const categories = ['Studies', 'Work', 'Personal', 'Fitness'];
+        const mapped = data.map((todo, idx) => {
+          return {
+            id: todo.id + '-' + userReg,
+            title: todo.title,
+            completed: todo.completed,
+            priority: priorities[idx % priorities.length],
+            category: categories[idx % categories.length],
+            createdAt: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+          };
+        });
+        setTasks(mapped);
+        localStorage.setItem(storageKey, JSON.stringify(mapped));
+        localStorage.setItem(initializedKey, 'true');
+      })
+      .catch(err => {
+        console.error('Error fetching initial API tasks:', err);
+        setTasks([]);
+      });
+  };
+
   const handleSelectProfile = (user) => {
     const name = user.name;
     const registration = `REG-${user.id}042${user.username.toUpperCase()}`;
     setStudentName(name);
     setRegNo(registration);
+    
+    const saved = localStorage.getItem(`tasks_${registration}`);
+    const isV3 = localStorage.getItem(`tasksInitialized_v3_${registration}`);
+    if (saved && isV3) {
+      setTasks(JSON.parse(saved));
+    } else {
+      setTasks([]);
+      initializeUserTasks(registration);
+    }
     setHasEntered(true);
   };
 
@@ -177,6 +176,17 @@ export default function App() {
       return;
     }
     setOnboardingError('');
+    const registration = regNo.trim();
+    setRegNo(registration);
+    
+    const saved = localStorage.getItem(`tasks_${registration}`);
+    const isV3 = localStorage.getItem(`tasksInitialized_v3_${registration}`);
+    if (saved && isV3) {
+      setTasks(JSON.parse(saved));
+    } else {
+      setTasks([]);
+      initializeUserTasks(registration);
+    }
     setHasEntered(true);
   };
 
@@ -204,7 +214,7 @@ export default function App() {
       <div className="onboarding-portal">
         <div className="onboarding-card card">
           <div className="onboarding-brand">
-            <span className="onboarding-icon">⚡</span>
+            <img src={logoImg} alt="TaskFlow Logo" className="onboarding-logo-img" style={{ width: '64px', height: '64px', borderRadius: '16px', marginBottom: '0.75rem', objectFit: 'cover' }} />
             <h1>TaskFlow</h1>
             <p className="onboarding-tagline">Easy Task Manager App</p>
           </div>
@@ -310,6 +320,7 @@ export default function App() {
           setRegNo={setRegNo}
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
+          setHasEntered={setHasEntered}
         />
 
         {/* Dashboard Statistics Widget */}

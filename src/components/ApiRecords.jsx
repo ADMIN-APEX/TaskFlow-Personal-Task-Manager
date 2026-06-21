@@ -1,14 +1,5 @@
 import { useState, useEffect } from 'react';
 
-const simpleEnglishTitles = [
-  "Practice React coding exercises",
-  "Update student profile settings",
-  "Submit class assignment files",
-  "Review video tutorials online",
-  "Prepare notes for group meeting",
-  "Check the assignment deadline dates"
-];
-
 export default function ApiRecords() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,11 +15,7 @@ export default function ApiRecords() {
         return res.json();
       })
       .then((data) => {
-        const mapped = data.map((item, idx) => ({
-          ...item,
-          title: simpleEnglishTitles[idx % simpleEnglishTitles.length]
-        }));
-        setRecords(mapped);
+        setRecords(data);
         setLoading(false);
       })
       .catch(() => {

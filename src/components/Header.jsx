@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import logoImg from '../assets/logo.jpg';
 
-export default function Header({ studentName, setStudentName, regNo, setRegNo, isDarkMode, setIsDarkMode }) {
+export default function Header({ studentName, setStudentName, regNo, setRegNo, isDarkMode, setIsDarkMode, setHasEntered }) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(studentName);
   const [tempReg, setTempReg] = useState(regNo);
@@ -16,7 +17,7 @@ export default function Header({ studentName, setStudentName, regNo, setRegNo, i
     <header className="app-header">
       <div className="header-top">
         <div className="logo-section">
-          <div className="logo-icon">⚡</div>
+          <img src={logoImg} alt="TaskFlow Logo" className="logo-img" style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover' }} />
           <div className="brand">
             <h1>TaskFlow</h1>
             <span className="subtitle">Easy Task Manager</span>
@@ -41,6 +42,14 @@ export default function Header({ studentName, setStudentName, regNo, setRegNo, i
             }}
           >
             👤 Edit Student Details
+          </button>
+
+          <button 
+            className="btn-exit" 
+            onClick={() => setHasEntered(false)}
+            aria-label="Exit workspace"
+          >
+            🚪 Exit Workspace
           </button>
         </div>
       </div>
