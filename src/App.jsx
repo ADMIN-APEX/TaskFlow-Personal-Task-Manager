@@ -1,0 +1,308 @@
+import { useState, useEffect } from 'react';
+import Header from './components/Header';
+import TaskForm from './components/TaskForm';
+import TaskList from './components/TaskList';
+import ApiRecords from './components/ApiRecords';
+import Footer from './components/Footer';
+import './App.css';
+
+export default function App() {
+  const [hasEntered, setHasEntered] = useState(() => {
+    const saved = localStorage.getItem('hasEnteredWorkspace');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const [studentName, setStudentName] = useState(() => {
+    return localStorage.getItem('studentName') || '';
+  });
+  const [regNo, setRegNo] = useState(() => {
+    return localStorage.getItem('regNo') || '';
+  });
+
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem('tasks');
+    if (saved && (saved.includes('delectus') || saved.includes('autem') || saved.includes('laboriosam') || saved.includes('facilis') || (saved.includes('Organize documents') && saved.includes('Fitness')))) {
+      localStorage.removeItem('tasks');
+      localStorage.removeItem('tasksInitialized');
+      return [];
+    }
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('darkMode');
+    return savedTheme ? JSON.parse(savedTheme) : true;
+  });
+
+  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [onboardingError, setOnboardingError] = useState('');
+
+  // Fetch initial tasks from public API if first time
+  useEffect(() => {
+    const initialized = localStorage.getItem('tasksInitialized');
+    const savedTasks = localStorage.getItem('tasks');
+    
+    if (!initialized && (!savedTasks || JSON.parse(savedTasks).length === 0)) {
+      fetch('https://jsonplaceholder.typicode.com/todos?_limit=5')
+        .then(res => {
+          if (!res.ok) throw new Error('API error');
+          return res.json();
+        })
+        .then(data => {
+          const defaultEnglishTasks = [
+            { title: "Complete React coding assignments", category: "Studies", priority: "High" },
+            { title: "Write the weekly work report", category: "Work", priority: "High" },
+            { title: "Read module learning outcomes", category: "Studies", priority: "Medium" },
+            { title: "Organize documents and folders", category: "Personal", priority: "Low" },
+            { title: "Submit final project zip file", category: "Work", priority: "High" }
+          ];
+          const mapped = data.map((todo, idx) => {
+            const taskDetails = defaultEnglishTasks[idx % defaultEnglishTasks.length];
+            return {
+              id: todo.id,
+              title: taskDetails.title,
+              completed: todo.completed,
+              priority: taskDetails.priority,
+              category: taskDetails.category,
+              createdAt: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            };
+          });
+          setTasks(mapped);
+          localStorage.setItem('tasksInitialized', 'true');
+        })
+        .catch(err => {
+          console.error('Error fetching initial API tasks:', err);
+          // Fallback static tasks if offline
+          setTasks([
+            { id: 1, title: 'Read React components guide', priority: 'High', category: 'Studies', completed: true, createdAt: 'Jun 20' },
+            { id: 2, title: 'Complete task manager website project', priority: 'High', category: 'Work', completed: false, createdAt: 'Jun 20' }
+          ]);
+        });
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('studentName', studentName);
+  }, [studentName]);
+
+  useEffect(() => {
+    localStorage.setItem('regNo', regNo);
+  }, [regNo]);
+
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  useEffect(() => {
+    localStorage.setItem('hasEnteredWorkspace', JSON.stringify(hasEntered));
+  }, [hasEntered]);
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+    if (isDarkMode) {
+      document.body.classList.add('dark-theme');
+      document.body.classList.remove('light-theme');
+    } else {
+      document.body.classList.add('light-theme');
+      document.body.classList.remove('dark-theme');
+    }
+  }, [isDarkMode]);
+
+  // Update page title
+  useEffect(() => {
+    if (hasEntered) {
+      const activeCount = tasks.filter(t => !t.completed).length;
+      document.title = `TaskFlow (${activeCount} Active Tasks)`;
+    } else {
+      document.title = "Welcome to TaskFlow";
+    }
+  }, [tasks, hasEntered]);
+
+  // Welcome banner on mount / entry
+  useEffect(() => {
+    if (!hasEntered) return;
+    
+    const finishedCount = tasks.filter(t => t.completed).length;
+    const bannerMsg = `👋 Welcome! You have finished ${finishedCount} tasks so far. Keep it up!`;
+    const setupTimer = setTimeout(() => {
+      setWelcomeMessage(bannerMsg);
+    }, 0);
+    const clearTimer = setTimeout(() => {
+      setWelcomeMessage('');
+    }, 6000);
+    return () => {
+      clearTimeout(setupTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [hasEntered]);
+
+  const handleLaunch = (e) => {
+    e.preventDefault();
+    if (!studentName.trim()) {
+      setOnboardingError('⚠️ Please enter your name.');
+      return;
+    }
+    if (!regNo.trim()) {
+      setOnboardingError('⚠️ Please enter your registration number.');
+      return;
+    }
+    setOnboardingError('');
+    setHasEntered(true);
+  };
+
+  const handleAddTask = (newTask) => {
+    setTasks([newTask, ...tasks]);
+  };
+
+  const handleToggleComplete = (id) => {
+    setTasks(tasks.map(task => 
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
+  const handleDeleteTask = (id) => {
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
+  const totalCount = tasks.length;
+  const completedCount = tasks.filter(t => t.completed).length;
+  const pendingCount = totalCount - completedCount;
+  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  if (!hasEntered) {
+    return (
+      <div className="onboarding-portal">
+        <div className="onboarding-card card">
+          <div className="onboarding-brand">
+            <span className="onboarding-icon">⚡</span>
+            <h1>TaskFlow</h1>
+            <p className="onboarding-tagline">Easy Task Manager App</p>
+          </div>
+
+          <p className="onboarding-description">
+            Organize your daily tasks, filter them, see your progress, and get sample tasks from an online list.
+          </p>
+
+          <form onSubmit={handleLaunch} className="onboarding-form">
+            <h3>Enter Your Info to Start</h3>
+            
+            <div className="form-group">
+              <label htmlFor="onboardName">Student Name</label>
+              <input
+                id="onboardName"
+                type="text"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                placeholder="Enter Student Name"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="onboardReg">Registration Number</label>
+              <input
+                id="onboardReg"
+                type="text"
+                value={regNo}
+                onChange={(e) => setRegNo(e.target.value)}
+                placeholder="Enter Registration Number"
+                required
+              />
+            </div>
+
+            {onboardingError && <p className="error-message" role="alert">{onboardingError}</p>}
+
+            <button type="submit" className="btn btn-primary btn-launch">
+              <span>Start Using App</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </form>
+
+          <div className="onboarding-footer">
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-container animate-fade-in">
+      {welcomeMessage && (
+        <div className="welcome-toast" role="status">
+          <p>{welcomeMessage}</p>
+          <button className="toast-close" onClick={() => setWelcomeMessage('')}>✕</button>
+        </div>
+      )}
+
+      <div className="main-content-wrapper">
+        <Header 
+          studentName={studentName}
+          setStudentName={setStudentName}
+          regNo={regNo}
+          setRegNo={setRegNo}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+        />
+
+        {/* Dashboard Statistics Widget */}
+        <section className="stats-dashboard card">
+          <div className="stat-card">
+            <span className="stat-icon">📊</span>
+            <div className="stat-info">
+              <h3>{totalCount}</h3>
+              <p>Total Tasks</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <span className="stat-icon text-success">✔️</span>
+            <div className="stat-info">
+              <h3>{completedCount}</h3>
+              <p>Completed</p>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <span className="stat-icon text-pending">⏳</span>
+            <div className="stat-info">
+              <h3>{pendingCount}</h3>
+              <p>Remaining</p>
+            </div>
+          </div>
+
+          <div className="stat-progress-card">
+            <div className="progress-header">
+              <span>Progress</span>
+              <span className="progress-percent">{completionRate}% Done</span>
+            </div>
+            <div className="progress-bar-bg">
+              <div 
+                className="progress-bar-fill" 
+                style={{ width: `${completionRate}%` }}
+              ></div>
+            </div>
+          </div>
+        </section>
+
+        <div className="app-grid-layout">
+          <div className="app-left-col">
+            <TaskForm onAddTask={handleAddTask} />
+          </div>
+
+          <div className="app-right-col">
+            <TaskList 
+              tasks={tasks}
+              onToggleComplete={handleToggleComplete}
+              onDeleteTask={handleDeleteTask}
+            />
+          </div>
+        </div>
+
+        <ApiRecords />
+        <Footer />
+      </div>
+    </div>
+  );
+}
